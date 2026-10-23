@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RICH BY ENGLISH · A1 · La hora y mi rutina</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:linear-gradient(160deg,#fef3c7,#fce7f3 45%,#dbeafe);min-height:100vh;font-family:ui-rounded,"Nunito","Segoe UI",system-ui,sans-serif;color:#1e293b}
+.pop{animation:pop .25s ease}
+@keyframes pop{from{transform:scale(.94);opacity:.4}to{transform:scale(1);opacity:1}}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+</head>
+<body>
+<div class="max-w-2xl mx-auto p-4">
+  <header class="text-center py-4">
+    <div class="inline-block bg-gradient-to-r from-fuchsia-500 via-orange-400 to-amber-400 text-white font-black tracking-wide text-2xl sm:text-3xl px-6 py-2 rounded-2xl shadow-lg">RICH BY ENGLISH</div>
+    <p class="mt-2 text-slate-600 font-semibold">Teacher Edward · Nivel A1 · ⏰ La hora y mi rutina</p>
+  </header>
+  <nav id="tabs" class="grid grid-cols-4 gap-2 mb-4"></nav>
+  <main id="app" class="bg-white rounded-3xl shadow-xl p-4 sm:p-6"></main>
+</div>
+
+<script>
+const CARDS = [
+  {t:"time", es:"Son las tres y media.", en:"It’s half past three.", tip:"Recuerda: usamos half past para la media hora (:30)."},
+  {t:"time", es:"Son las siete en punto.", en:"It’s seven o’clock.", tip:"o’clock = la hora exacta, sin minutos."},
+  {t:"time", es:"Son las cuatro y cuarto.", en:"It’s quarter past four.", tip:"quarter past = y cuarto (:15). ¡Después de la hora!"},
+  {t:"time", es:"Falta un cuarto para las cinco.", en:"It’s quarter to five.", tip:"quarter to = menos cuarto (:45). Antes de la siguiente hora."},
+  {t:"time", es:"¿Qué hora es?", en:"What time is it?", tip:"Es la pregunta clave. Respuesta: It’s + la hora."},
+  {t:"time", es:"Son las diez y cuarto.", en:"It’s quarter past ten.", tip:"Past = después. To = antes. ¡Así de fácil!"},
+  {t:"routine", es:"Me levanto a las siete.", en:"I get up at seven.", tip:"Usamos AT 📍 con la hora exacta: at seven."},
+  {t:"routine", es:"Estudio por la mañana.", en:"I study in the morning.", tip:"Usamos IN 📦 para partes del día: in the morning."},
+  {t:"routine", es:"Siempre trabajo los lunes.", en:"I always work on Mondays.", tip:"ON 📅 para los días. Y always va antes del verbo."},
+  {t:"routine", es:"¡Llego tarde!", en:"I’m late!", tip:"Lo contrario de late es early (temprano)."},
+  {t:"routine", es:"Normalmente me despierto temprano.", en:"I usually wake up early.", tip:"usually = normalmente. wake up = despertarse."},
+  {t:"routine", es:"Estoy cansado después del trabajo.", en:"I’m tired after work.", tip:"after = después, before = antes. ¡Y tired = cansado!"}
+];
+
+const QUIZ = [
+  {s:"I have English class ___ Monday.", a:"ON", why:"ON es para días del calendario 📅"},
+  {s:"I wake up ___ 6:30.", a:"AT", why:"AT es para la hora exacta 📍"},
+  {s:"I study ___ the morning.", a:"IN", why:"IN es para partes del día 📦"},
+  {s:"I never work ___ weekends.", a:"ON", why:"ON es para días del calendario 📅 (on weekends)"},
+  {s:"My birthday is ___ July.", a:"IN", why:"IN es para los meses 📦"},
+  {s:"I sleep ___ night.", a:"AT", why:"AT night es una expresión especial 📍"},
+  {s:"See you ___ five!", a:"AT", why:"AT es para la hora exacta 📍"},
+  {s:"We start work ___ eight o’clock.", a:"AT", why:"AT es para la hora exacta 📍"},
+  {s:"I’m always tired ___ Friday.", a:"ON", why:"ON es para días del calendario 📅"},
+  {s:"I usually study ___ the afternoon.", a:"IN", why:"IN es para partes del día 📦"}
+];
+const HINT = {AT:"📍 AT = punto pequeño (hora exacta)", ON:"📅 ON = hoja de calendario (días)", IN:"📦 IN = caja grande (partes del día, meses)"};
+const OPT = {AT:["📍","bg-rose-500 hover:bg-rose-600"], ON:["📅","bg-sky-500 hover:bg-sky-600"], IN:["📦","bg-emerald-500 hover:bg-emerald-600"]};
+
+const ROUTINE = [
+  {q:"What time do you usually wake up?", ex:"I usually wake up at six."},
+  {q:"What do you do in the morning?", ex:"I get up, then I study."},
+  {q:"What time do you start work or study?", ex:"I start at eight o’clock."},
+  {q:"Are you busy on Mondays?", ex:"Yes, I’m always busy on Mondays."},
+  {q:"What time do you go to sleep?", ex:"I sleep at ten, but I’m never early."}
+];
+const BANK = ["always","usually","never","before","after","then","and","but"];
+
+const S = {tab:0, card:0, rev:false, q:0, score:0, picked:null, wrong:false, ok:false, done:false, drafts:{}, saved:{}};
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const TABS = [["⏰","¿Qué hora es?","bg-sky-500"],["📍","AT · ON · IN","bg-fuchsia-500"],["✏️","Mi rutina","bg-orange-500"],["🔁","Traduce","bg-teal-500"]];
+function renderTabs(){
+  $("tabs").innerHTML = TABS.map((t,i)=>`<button data-tab="${i}" class="rounded-2xl py-3 px-1 font-extrabold text-sm sm:text-base shadow transition ${S.tab===i?t[2]+' text-white scale-105':'bg-white text-slate-600 hover:bg-slate-50'}"><div class="text-2xl">${t[0]}</div>${t[1]}</button>`).join("");
+}
+
+function viewCards(){
+  const c = CARDS[S.card], isT = c.t==="time";
+  const dots = CARDS.map((_,i)=>`<span class="h-2 flex-1 rounded-full ${i<=S.card?'bg-sky-500':'bg-slate-200'}"></span>`).join("");
+  return `
+  <h2 class="text-xl font-black mb-1">⏰ Flashcards: Traduce al inglés</h2>
+  <p class="text-slate-500 text-sm mb-3">Lee la frase en español, piensa en inglés y pulsa “Revelar”.</p>
+  <div class="flex gap-1 mb-4">${dots}</div>
+  <div class="pop rounded-3xl p-6 text-center ${isT?'bg-sky-100 border-4 border-sky-300':'bg-orange-100 border-4 border-orange-300'}">
+    <div class="inline-block text-xs font-extrabold px-3 py-1 rounded-full text-white ${isT?'bg-sky-500':'bg-orange-500'}">${isT?'⏰ La hora':'🌞 Mi rutina'} · ${S.card+1}/12</div>
+    <p class="text-2xl sm:text-3xl font-black mt-4">${c.es}</p>
+    ${S.rev ? `<div class="pop mt-5 bg-white rounded-2xl p-4 shadow-inner"><p class="text-2xl font-black text-fuchsia-600">${c.en}</p><p class="mt-2 text-slate-600">💡 ${c.tip}</p></div>`
+            : `<button data-act="reveal" class="mt-6 bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-extrabold px-8 py-3 rounded-2xl shadow text-lg">👀 Revelar</button>`}
+  </div>
+  <div class="flex justify-between mt-5">
+    <button data-act="prev" ${S.card===0?'disabled':''} class="px-5 py-2 rounded-xl font-bold bg-slate-200 hover:bg-slate-300 disabled:opacity-40">← Anterior</button>
+    <button data-act="next" class="px-5 py-2 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white">${S.card===11?'↺ Empezar':'Siguiente →'}</button>
+  </div>`;
+}
+
+function viewQuiz(){
+  if(S.done){
+    const stars = S.score>=9?"🏆":S.score>=6?"🌟":"💪";
+    return `<div class="pop text-center py-6"><div class="text-6xl">${stars}</div><h2 class="text-2xl font-black mt-2">¡Terminaste!</h2>
+    <p class="text-lg mt-2">Acertaste a la primera: <b class="text-fuchsia-600">${S.score}/10</b></p>
+    <p class="text-slate-500 mt-1">${S.score>=9?"¡Excelente, eres un experto en AT, ON, IN!":S.score>=6?"¡Muy bien! Sigue practicando.":"¡Buen intento! Repite y mira los dibujitos 📍📅📦"}</p>
+    <button data-act="qrestart" class="mt-5 bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-extrabold px-8 py-3 rounded-2xl">↺ Jugar otra vez</button></div>`;
+  }
+  const q = QUIZ[S.q], parts = q.s.split("___");
+  const blank = S.ok ? `<span class="px-3 rounded-lg bg-emerald-200 text-emerald-800">${q.a}</span>` : `<span class="px-6 rounded-lg bg-yellow-200 border-b-4 border-yellow-400">&nbsp;</span>`;
+  const btns = ["AT","ON","IN"].map(o=>`<button data-opt="${o}" ${S.ok?'disabled':''} class="${OPT[o][1]} text-white font-black text-2xl py-4 rounded-2xl shadow transition disabled:opacity-40"><div class="text-3xl">${OPT[o][0]}</div>${o}</button>`).join("");
+  let fb = "";
+  if(S.ok) fb = `<div class="pop mt-4 p-4 rounded-2xl bg-emerald-100 text-emerald-800 font-bold">¡Correcto! ${q.why}</div>
+    <button data-act="qnext" class="mt-3 w-full bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-extrabold py-3 rounded-2xl">${S.q===9?'Ver resultado 🏁':'Siguiente →'}</button>`;
+  else if(S.wrong) fb = `<div class="shake mt-4 p-4 rounded-2xl bg-rose-100 text-rose-800 font-bold">Casi 😅 Prueba otra vez. Pista: ${HINT[S.picked]==null?'':'tu respuesta fue '+S.picked+'.'}<br>${HINT.AT}<br>${HINT.ON}<br>${HINT.IN}</div>`;
+  return `
+  <h2 class="text-xl font-black mb-1">📍📅📦 El Juego de AT, ON, IN</h2>
+  <div class="flex items-center justify-between text-sm text-slate-500 mb-3"><span>Pregunta ${S.q+1} de 10</span><span>⭐ ${S.score}</span></div>
+  <div class="h-3 bg-slate-200 rounded-full mb-4"><div class="h-3 bg-fuchsia-500 rounded-full transition-all" style="width:${(S.q/10)*100}%"></div></div>
+  <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold mb-4">
+    <div class="rounded-xl bg-rose-50 text-rose-700 p-2">📍 AT<br>punto pequeño</div><div class="rounded-xl bg-sky-50 text-sky-700 p-2">📅 ON<br>hoja de calendario</div><div class="rounded-xl bg-emerald-50 text-emerald-700 p-2">📦 IN<br>caja grande</div>
+  </div>
+  <p class="text-2xl font-black text-center py-4 leading-relaxed">${parts[0]}${blank}${parts[1]}</p>
+  <div class="grid grid-cols-3 gap-3">${btns}</div>${fb}`;
+}
+
+function viewRoutine(){
+  const bank = BANK.map(w=>`<span class="px-3 py-1 rounded-full bg-white border-2 border-amber-300 font-extrabold text-amber-700">${w}</span>`).join("");
+  const items = ROUTINE.map((r,i)=>{
+    const saved = S.saved[i];
+    return `<div class="rounded-2xl border-2 border-orange-200 p-4 bg-orange-50">
+      <p class="font-black text-lg">${i+1}. ${r.q}</p>
+      <p class="text-sm text-slate-500 mb-2">Ejemplo: <i>${r.ex}</i></p>
+      <textarea data-ta="${i}" rows="2" placeholder="Write here… ✍️" class="w-full rounded-xl border-2 border-orange-200 p-3 focus:outline-none focus:border-orange-400 text-slate-800 bg-white">${esc(S.drafts[i]||"")}</textarea>
+      <button data-save="${i}" class="mt-2 bg-orange-500 hover:bg-orange-600 text-white font-extrabold px-5 py-2 rounded-xl">💾 Guardar</button>
+      ${saved ? `<div class="pop mt-3 p-3 rounded-xl bg-emerald-100 text-emerald-900 font-semibold">✅ ${esc(saved)}</div>` : ""}
+    </div>`;}).join("");
+  return `
+  <h2 class="text-xl font-black mb-1">✏️ Mi rutina: Escribe sobre tu día</h2>
+  <p class="text-slate-500 text-sm mb-3">Responde con frases cortas. ¡No importa si no es perfecto!</p>
+  <div class="rounded-2xl bg-amber-100 p-3 mb-4"><p class="font-black mb-2">🧠 Banco de palabras</p><div class="flex flex-wrap gap-2">${bank}</div>
+    <p class="text-xs text-amber-800 mt-2">Recuerda: at 7:00 📍 · on Monday 📅 · in the morning 📦</p></div>
+  <div class="space-y-4">${items}</div>`;
+}
+
+const TR = {
+ A1:[["Me llamo Ana y tengo diez años.","My name is Ana and I’m ten years old."],["Mi mamá cocina en la cocina.","My mom cooks in the kitchen."],["Tengo un perro grande.","I have a big dog."],["¿Dónde está el baño?","Where is the bathroom?"],["Me gusta la pizza, pero no me gusta el pescado.","I like pizza, but I don’t like fish."],["Ella trabaja los martes.","She works on Tuesdays."],["Son las ocho y media.","It’s half past eight."],["Nunca como carne.","I never eat meat."],["Mi hermano es alto y simpático.","My brother is tall and nice."],["Hoy hace calor.","It’s hot today."],["Vivo en Medellín con mi familia.","I live in Medellín with my family."],["¿Cuánto cuesta esta camisa?","How much is this shirt?"],["Estoy cansado y quiero dormir.","I’m tired and I want to sleep."],["Siempre desayuno a las siete.","I always have breakfast at seven."],["Ellos juegan fútbol en el parque.","They play soccer in the park."],["Hay tres libros en la mesa.","There are three books on the table."],["Mi cumpleaños es en julio.","My birthday is in July."],["Después de la clase, voy a casa.","After class, I go home."],["¿Puedes ayudarme, por favor?","Can you help me, please?"],["Mi teléfono está en mi mochila.","My phone is in my backpack."]],
+ A2:[["Ayer fui al supermercado con mi mamá.","Yesterday I went to the supermarket with my mom."],["Mañana voy a visitar a mis abuelos.","Tomorrow I’m going to visit my grandparents."],["Normalmente me levanto temprano, pero hoy me desperté tarde.","I usually get up early, but today I woke up late."],["Estoy viendo una película con mis amigos.","I’m watching a movie with my friends."],["Mi hermana es más alta que yo.","My sister is taller than me."],["¿Cuánto tiempo tardas en llegar al trabajo?","How long does it take you to get to work?"],["Tengo que terminar la tarea antes de las nueve.","I have to finish my homework before nine o’clock."],["Cuando era niño, vivía en un pueblo pequeño.","When I was a child, I lived in a small town."],["No puedo salir porque estoy muy ocupado.","I can’t go out because I’m very busy."],["¿Quieres tomar algo?","Do you want something to drink?"],["Compré unos zapatos nuevos el sábado.","I bought some new shoes on Saturday."],["Hay mucha gente en la playa en verano.","There are a lot of people at the beach in summer."],["El tren sale a las cinco y cuarto.","The train leaves at quarter past five."],["Me duele la cabeza, así que voy a descansar.","I have a headache, so I’m going to rest."],["Ella siempre llega tarde a las reuniones.","She always arrives late to meetings."],["Primero estudio y luego veo televisión.","First I study and then I watch TV."],["¿Puedo pagar con tarjeta?","Can I pay by card?"],["Mi mejor amigo vive cerca de mi casa.","My best friend lives near my house."],["Llovió todo el fin de semana.","It rained all weekend."],["Podemos encontrarnos frente al cine.","We can meet in front of the cinema."]],
+ B1:[["He vivido aquí desde que empecé la universidad.","I’ve lived here since I started university."],["Si tuviera más tiempo, aprendería otro idioma.","If I had more time, I would learn another language."],["Me pidió que le ayudara con el proyecto.","He asked me to help him with the project."],["Aunque estaba cansado, terminé el trabajo.","Although I was tired, I finished the work."],["Deberías haber llamado antes de venir.","You should have called before coming."],["La película que vimos ayer fue mejor de lo que esperaba.","The movie we watched yesterday was better than I expected."],["Llevo tres meses estudiando inglés todos los días.","I’ve been studying English every day for three months."],["No sé si podré ir a la fiesta el sábado.","I don’t know if I’ll be able to go to the party on Saturday."],["Se acostumbró rápido a vivir en otra ciudad.","He got used to living in another city quickly."],["Me alegra que hayas conseguido el trabajo.","I’m glad you got the job."],["Mientras cocinaba, sonó el teléfono.","While I was cooking, the phone rang."],["Es la persona más amable que he conocido.","She’s the kindest person I’ve ever met."],["Habría ido a la reunión, pero mi teléfono se quedó sin batería.","I would have gone to the meeting, but my phone died."],["Tienes que decidir si quieres quedarte o irte.","You have to decide whether you want to stay or leave."],["Me dijeron que el vuelo se había retrasado.","They told me the flight had been delayed."],["Prefiero trabajar desde casa porque ahorro tiempo.","I prefer working from home because I save time."],["A pesar de la lluvia, el concierto fue increíble.","Despite the rain, the concert was amazing."],["Cuando llegué, ya habían empezado a comer.","When I arrived, they had already started eating."],["Estoy pensando en cambiar de trabajo el próximo año.","I’m thinking about changing jobs next year."],["¿Te importaría cerrar la ventana?","Would you mind closing the window?"]]
+};
+Object.assign(S,{lvl:null,ti:0,trev:false,attempt:"",tdeck:[]});
+function buildDeck(){
+  const pool = (S.lvl==="MIX" ? [...TR.A1,...TR.A2,...TR.B1] : S.lvl==="A12" ? [...TR.A1,...TR.A2] : TR[S.lvl]).slice();
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  S.tdeck=pool; S.ti=0; S.trev=false; S.attempt="";
+}
+const LV = [["A1","A1","bg-emerald-500"],["A2","A2","bg-sky-500"],["A12","A1-A2","bg-teal-500"],["B1","B1","bg-fuchsia-500"],["MIX","🎲 A1-B1","bg-amber-500"]];
+function viewPick(){
+  const O = [["A1","A1","Presente simple, to be, gustos y la hora","bg-emerald-500"],["A2","A2","Pasado, futuro y comparativos","bg-sky-500"],["A12","A1-A2","40 frases de A1 y A2 mezcladas","bg-teal-500"],["B1","B1","Present perfect, condicionales y reported speech","bg-fuchsia-500"],["MIX","A1-B1","60 frases de todos los niveles, ¡reto total!","bg-amber-500"]];
+  return `<h2 class="text-xl font-black mb-1">🔁 Traduce al inglés</h2>
+  <p class="text-slate-600 font-bold mb-4">👇 Elige la dificultad que quieres practicar:</p>
+  <div class="space-y-3">${O.map(o=>`<button data-lvl="${o[0]}" class="w-full text-left ${o[3]} hover:opacity-90 text-white rounded-2xl p-4 shadow flex items-center gap-4"><span class="text-3xl font-black">${o[1]}</span><span class="font-bold">${o[2]}</span></button>`).join("")}</div>`;
+}
+function viewTrans(){
+  if(!S.lvl) return viewPick();
+  const cur = S.tdeck[S.ti];
+  const lv = LV.map(l=>`<button data-lvl="${l[0]}" class="py-2 rounded-xl font-extrabold text-sm ${S.lvl===l[0]?l[2]+' text-white shadow scale-105':'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${l[1]}</button>`).join("");
+  return `
+  <h2 class="text-xl font-black mb-1">🔁 Traduce al inglés</h2>
+  <p class="text-slate-500 text-sm mb-1">Escribe tu traducción y compárala con la respuesta.</p>
+  <p class="text-slate-600 font-bold text-sm mb-2">Dificultad (puedes cambiarla cuando quieras):</p>
+  <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">${lv}</div>
+  <div class="pop rounded-3xl p-5 bg-teal-50 border-4 border-teal-200">
+    <div class="text-xs font-extrabold text-teal-700 mb-2">Frase ${S.ti+1} de ${S.tdeck.length} · nivel ${LV.find(l=>l[0]===S.lvl)[1].replace("🎲 ","")}</div>
+    <p class="text-2xl font-black text-center py-3">${cur[0]}</p>
+    <textarea data-tr="1" rows="2" placeholder="Write your translation… ✍️" class="w-full rounded-xl border-2 border-teal-200 p-3 focus:outline-none focus:border-teal-400 text-slate-800 bg-white">${esc(S.attempt)}</textarea>
+    ${S.trev ? `<div class="pop mt-3 bg-white rounded-2xl p-4 shadow-inner"><p class="text-xs text-slate-500 font-bold">Respuesta modelo</p><p class="text-xl font-black text-fuchsia-600">${cur[1]}</p></div>`
+             : `<button data-act="treveal" class="mt-3 w-full bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-extrabold py-3 rounded-2xl">👀 Revelar</button>`}
+  </div>
+  <button data-act="tnext" class="mt-4 w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-3 rounded-2xl">Otra frase →</button>`;
+}
+
+function render(){
+  renderTabs();
+  $("app").innerHTML = [viewCards,viewQuiz,viewRoutine,viewTrans][S.tab]();
+}
+
+document.addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  const d = b.dataset;
+  if(d.tab!==undefined){ S.tab=+d.tab; render(); return; }
+  if(d.act==="reveal"){ S.rev=true; }
+  else if(d.act==="next"){ S.card=(S.card+1)%12; S.rev=false; }
+  else if(d.act==="prev"){ S.card=Math.max(0,S.card-1); S.rev=false; }
+  else if(d.opt){
+    const q = QUIZ[S.q];
+    if(d.opt===q.a){ S.ok=true; S.wrong=false; if(!S.hadError) S.score++; }
+    else { S.wrong=true; S.picked=d.opt; S.hadError=true; }
+  }
+  else if(d.act==="qnext"){ if(S.q===9){ S.done=true; } else { S.q++; } S.ok=false; S.wrong=false; S.hadError=false; }
+  else if(d.act==="qrestart"){ Object.assign(S,{q:0,score:0,ok:false,wrong:false,hadError:false,done:false}); }
+  else if(d.save!==undefined){
+    const i=+d.save, ta=document.querySelector(`[data-ta="${i}"]`);
+    S.drafts[i]=ta.value; S.saved[i]=ta.value.trim();
+    if(!S.saved[i]) delete S.saved[i];
+  }
+  else if(d.lvl){ S.lvl=d.lvl; buildDeck(); }
+  else if(d.act==="treveal"){ S.trev=true; }
+  else if(d.act==="tnext"){ S.ti++; if(S.ti>=S.tdeck.length) buildDeck(); S.trev=false; S.attempt=""; }
+  else return;
+  render();
+});
+document.addEventListener("input", e=>{
+  if(e.target.dataset.ta!==undefined) S.drafts[e.target.dataset.ta]=e.target.value;
+  if(e.target.dataset.tr!==undefined) S.attempt=e.target.value;
+});
+render();
+</script>
+</body>
+</html>
